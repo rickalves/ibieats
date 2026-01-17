@@ -1,8 +1,10 @@
-# 💳 PayBite - Do pedido ao pagamento, sem complicação
+# 🍔 IbiEats — Do pedido à entrega, com arquitetura de verdade
 
-**PayBite** é um **case de estudo técnico** que implementa um fluxo de **pedido e pagamento distribuído**, inspirado em arquiteturas usadas por empresas como no ramo de **FoodTech e Fintech**.
+**IbiEats** é um **case de estudo técnico** que implementa um fluxo distribuído de **pedido, pagamento e entrega**, inspirado em arquiteturas utilizadas por grandes plataformas de **FoodTech**, mas com identidade e contexto da **Serra da Ibiapaba**.
 
-O projeto demonstra, de forma prática, como construir um sistema **orientado a eventos**, utilizando **microserviços**, **SAGA orquestrada**, **mensageria**, **idempotência** e **observabilidade**.
+O projeto demonstra, de forma prática, como construir um sistema moderno baseado em **microserviços**, **arquitetura orientada a eventos**, **SAGA orquestrada**, **mensageria**, **idempotência** e **observabilidade**, aplicando boas práticas de engenharia de software.
+
+> 📍 *Arquitetura pensada para a Ibiapaba. Engenharia no nível das grandes.*
 
 ---
 
@@ -15,53 +17,84 @@ Demonstrar domínio prático de:
 * **Consistência eventual** com SAGA
 * Tratamento de falhas em sistemas distribuídos
 * Boas práticas com **NestJS + TypeScript**
+* Modelagem de sistemas inspirados em **apps de delivery**
 
-> Este projeto **não é um MVP de produto**, mas sim um **case técnico focado em arquitetura e engenharia de software**.
+> ⚠️ Este projeto **não é um MVP comercial**, mas sim um **case técnico focado em arquitetura, engenharia e tomada de decisão técnica**, ideal para estudo, portfólio e entrevistas.
 
 ---
 
 ## 🧠 Visão Geral da Arquitetura
 
-O PayBite é composto por múltiplos serviços independentes, cada um com uma responsabilidade bem definida.
+O **IbiEats** é composto por múltiplos serviços independentes, cada um com responsabilidade única, simulando o funcionamento interno de um app de delivery real.
 
 ### Serviços
 
 * **API Gateway (BFF)**
-  Entrada única do sistema, autenticação e validação
+  Entrada única do sistema, autenticação, validação e exposição da API
+
 * **Orders Service**
-  Orquestra o fluxo do pedido (SAGA)
+  Orquestra o fluxo do pedido (**SAGA**)
+
 * **Inventory Service**
-  Reserva e libera estoque
+  Reserva e libera itens do pedido (simulando estoque/cardápio)
+
 * **Payments Service**
-  Processa pagamentos (simulado)
+  Processa pagamentos (simulado, com aprovação/recusa)
+
+* **Delivery Service** 🛵
+  Responsável pela **gestão da entrega**, incluindo:
+
+  * Criação da entrega após pedido confirmado
+  * Atribuição de entregador (simulado)
+  * Atualização de status (`WAITING_DRIVER`, `ON_THE_WAY`, `DELIVERED`)
+  * Emissão de eventos de progresso da entrega
+
 * **Notifications Service**
   Envia notificações ao usuário (mock)
 
+---
+
 ### Comunicação
 
-* **HTTP/REST**: Gateway → Orders
-* **Eventos (RabbitMQ)**: Comunicação entre serviços internos
+* **HTTP/REST**
+  API Gateway → Orders Service
+
+* **Eventos (RabbitMQ)**
+  Comunicação assíncrona entre os serviços internos:
+
+  * Pedido criado
+  * Pagamento aprovado/recusado
+  * Entrega iniciada/finalizada
 
 ---
 
-## 🔄 Fluxo do Pedido (Resumo)
+## 🔄 Fluxo do Pedido e Entrega (Resumo)
 
-1. Usuário cria um pedido via API Gateway
-2. Orders Service cria o pedido (`CREATED`)
-3. Inventory Service tenta reservar estoque
+1. Usuário cria um pedido via **API Gateway**
+2. **Orders Service** cria o pedido (`CREATED`)
+3. **Inventory Service** tenta reservar os itens
 
    * Se falhar → pedido é cancelado
-4. Payments Service processa o pagamento
+4. **Payments Service** processa o pagamento
 
-   * Se aprovado → pedido é confirmado
-   * Se falhar → pedido é cancelado e estoque liberado
-5. Notifications Service notifica o usuário
+   * Se recusado → pedido cancelado e estoque liberado
+   * Se aprovado → pedido confirmado
+5. **Delivery Service** cria a entrega
+
+   * Pedido entra em status `OUT_FOR_DELIVERY`
+   * Entregador é atribuído (mock)
+6. **Delivery Service** atualiza o status da entrega
+
+   * `ON_THE_WAY`
+   * `DELIVERED`
+7. **Orders Service** recebe evento de entrega concluída
+8. **Notifications Service** notifica o usuário em cada etapa
 
 ---
 
 ## 🧩 Padrões Arquiteturais Aplicados
 
-* **SAGA Orquestrada** (Orders Service coordena o fluxo)
+* **SAGA Orquestrada** (Orders Service coordena pedido + pagamento + entrega)
 * **Event-driven Architecture**
 * **Idempotência** em consumidores de eventos
 * **Retry com backoff**
@@ -88,7 +121,7 @@ O PayBite é composto por múltiplos serviços independentes, cada um com uma re
 ### Qualidade e Observabilidade
 
 * **JWT** para autenticação
-* **Swagger/OpenAPI**
+* **Swagger / OpenAPI**
 * **Logs estruturados (JSON)**
 * **Healthcheck (`/health`)**
 * **Testes unitários e E2E**
@@ -98,12 +131,13 @@ O PayBite é composto por múltiplos serviços independentes, cada um com uma re
 ## 📁 Estrutura do Repositório
 
 ```txt
-paybite/
+ibieats/
 ├─ apps/
 │  ├─ api-gateway/
 │  ├─ orders-service/
 │  ├─ inventory-service/
 │  ├─ payments-service/
+│  ├─ delivery-service/
 │  └─ notifications-service/
 │
 ├─ libs/
@@ -131,7 +165,7 @@ paybite/
 * Docker
 * Docker Compose
 * Node.js 18+
-* pnpm (opcional, para desenvolvimento local)
+* pnpm (opcional)
 
 ### Subindo a stack completa
 
@@ -149,21 +183,25 @@ Após a inicialização:
 
 ## 🔐 Autenticação
 
-O projeto utiliza **JWT** para proteger os endpoints de pedido.
-
+* JWT para proteger endpoints
 * Login simulado
-* JWT enviado via `Authorization: Bearer <token>`
-* `userId` propagado nos eventos
+* `userId` propagado nos eventos de pedido e entrega
 
 ---
 
 ## 🧪 Testes
 
-* **Unitários**: regras de negócio e handlers
-* **E2E**: fluxo completo de pedido
+* **Unitários**
 
-  * pagamento aprovado
-  * pagamento recusado
+  * Regras de negócio
+  * Handlers de eventos
+  * Idempotência
+
+* **E2E**
+
+  * Pedido completo com entrega
+  * Pagamento aprovado
+  * Pagamento recusado
 
 ```bash
 pnpm test
@@ -175,17 +213,17 @@ pnpm test:e2e
 ## 📊 Observabilidade
 
 * Logs estruturados em JSON
-* Todos os serviços utilizam `correlationId`
-* Possível rastrear um pedido do início ao fim apenas pelos logs
+* Uso consistente de `correlationId`
+* Rastreabilidade completa do pedido até a entrega
 
-Exemplo de log:
+Exemplo:
 
 ```json
 {
-  "service": "orders-service",
-  "orderId": "123",
-  "correlationId": "abc-xyz",
-  "message": "Order confirmed successfully"
+  "service": "delivery-service",
+  "orderId": "789",
+  "correlationId": "corr-456",
+  "message": "Delivery completed successfully"
 }
 ```
 
@@ -193,19 +231,30 @@ Exemplo de log:
 
 ## 📌 Decisões Técnicas
 
-### Por que RabbitMQ?
+### Por que um Delivery Service separado?
 
-* Mais simples que Kafka para um case
-* Muito usado em ambientes corporativos
-* Facilita demonstração de retry e DLQ
+* Reflete arquitetura real de apps de delivery
+* Evita acoplamento com Orders
+* Facilita escalabilidade e regras próprias
+* Permite futura evolução (roteirização, ETA, entregadores reais)
 
 ### Por que SAGA Orquestrada?
 
-* Fluxo mais fácil de explicar em entrevistas
-* Centraliza regras de negócio críticas
-* Evita acoplamento excessivo entre serviços
+* Mais didática para estudo e entrevistas
+* Centraliza regras críticas
+* Facilita rollback de pagamento e entrega
+
 ---
+
+## 🌱 Contexto Regional
+
+Embora seja um **case técnico**, o IbiEats é inspirado em um cenário real de **delivery regional**, valorizando o comércio local da **Serra da Ibiapaba** e demonstrando como arquiteturas modernas podem ser aplicadas fora dos grandes centros.
+
+---
+
 © 2026. Todos os direitos reservados.
 
-PayBite é um projeto de estudo técnico, desenvolvido para fins educacionais e demonstração
-de arquitetura de software. Não possui finalidade comercial.
+**IbiEats** é um projeto de estudo técnico, desenvolvido para fins educacionais e demonstração de arquitetura de software.
+Não possui finalidade comercial.
+
+---

@@ -1,0 +1,82 @@
+sequenceDiagram
+    autonumber
+
+    participant Client as Cliente
+    participant BFF as API Gateway
+    participant Orders as Orders Service (SAGA)
+    participant MQ as RabbitMQ
+    participant Inventory as Inventory Service
+    participant Payments as Payments Service
+    participant Delivery as Delivery Service
+    participant Notify as Notifications Service
+
+    %% Criação do pedido
+    Client->>BFF: POST /orders
+    BFF->>Orders: Create Order
+    Orders->>Orders: Pedido CREATED
+    Orders->>MQ: event order.created
+
+    %% Reserva de itens
+    MQ->>Inventory: order.created
+    Inventory->>Inventory: Tenta reservar itens
+
+    alt Reserva OK
+        Inventory->>MQ: event inventory.reserved
+    else Reserva FALHOU
+        Inventory->>MQ: event inventory.failed
+    end
+
+    %% Decisão da SAGA (Inventory)
+    MQ->>Orders: inventory.reserved / inventory.failed
+
+    alt inventory.failed
+        Orders->>Orders: Pedido CANCELED
+        Orders->>MQ: event order.canceled
+        MQ->>Notify: order.canceled
+        Notify->>Notify: Notifica cliente
+        Note over Orders: Fim da SAGA (rollback)
+    end
+
+    %% Pagamento
+    Orders->>MQ: event payment.requested
+    MQ->>Payments: payment.requested
+    Payments->>Payments: Processa pagamento
+
+    alt Pagamento APROVADO
+        Payments->>MQ: event payment.approved
+    else Pagamento RECUSADO
+        Payments->>MQ: event payment.failed
+    end
+
+    %% Decisão da SAGA (Payment)
+    MQ->>Orders: payment.approved / payment.failed
+
+    alt payment.failed
+        Orders->>Orders: Pedido CANCELED
+        Orders->>MQ: event inventory.release
+        Orders->>MQ: event order.canceled
+        MQ->>Notify: order.canceled
+        Notify->>Notify: Notifica cliente
+        Note over Orders: Compensação executada
+    end
+
+    %% Entrega
+    Orders->>MQ: event delivery.requested
+    MQ->>Delivery: delivery.requested
+    Delivery->>Delivery: Cria entrega
+
+    Delivery->>MQ: event delivery.started
+    MQ->>Notify: delivery.started
+    Notify->>Notify: Notifica cliente
+
+    Delivery->>Delivery: Pedido entregue
+    Delivery->>MQ: event delivery.completed
+
+    %% Finalização da SAGA
+    MQ->>Orders: delivery.completed
+    Orders->>Orders: Pedido DELIVERED
+    Orders->>MQ: event order.completed
+    MQ->>Notify: order.completed
+    Notify->>Notify: Notifica cliente
+
+    Note over Orders: SAGA finalizada com sucesso

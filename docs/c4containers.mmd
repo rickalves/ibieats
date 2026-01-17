@@ -1,0 +1,48 @@
+C4Container
+title IbiEats - Container Diagram (Boundaries)
+
+Person(customer, "Cliente")
+Person(deliveryman, "Entregador")
+
+System_Boundary(ibieats, "IbiEats Platform") {
+
+  Container(apiGateway, "API Gateway (BFF)", "NestJS", "Entrada única, autenticação e validação")
+
+  Container(ordersService, "Orders Service", "NestJS", "Orquestra pedidos e SAGA")
+  Container(inventoryService, "Inventory Service", "NestJS", "Reserva itens do pedido")
+  Container(paymentsService, "Payments Service", "NestJS", "Processa pagamentos")
+  Container(deliveryService, "Delivery Service", "NestJS", "Gerencia entregas")
+  Container(notificationsService, "Notifications Service", "NestJS", "Envia notificações")
+
+  ContainerDb(ordersDb, "Orders DB", "PostgreSQL")
+  ContainerDb(inventoryDb, "Inventory DB", "PostgreSQL")
+  ContainerDb(paymentsDb, "Payments DB", "PostgreSQL")
+  ContainerDb(deliveryDb, "Delivery DB", "PostgreSQL")
+
+  Container(queue, "Message Broker", "RabbitMQ", "Mensageria assíncrona")
+}
+
+System_Boundary(externals, "Sistemas Externos") {
+  System_Ext(paymentGateway, "Gateway de Pagamento", "Processador externo")
+  System_Ext(notificationProvider, "Serviço de Notificação", "Push / Email / SMS")
+}
+
+Rel(customer, apiGateway, "HTTP/REST")
+Rel(deliveryman, apiGateway, "HTTP/REST")
+
+Rel(apiGateway, ordersService, "HTTP/REST")
+
+Rel(ordersService, queue, "Publica eventos")
+Rel(queue, inventoryService, "Consome eventos")
+Rel(queue, paymentsService, "Consome eventos")
+Rel(queue, deliveryService, "Consome eventos")
+Rel(queue, notificationsService, "Consome eventos")
+
+Rel(paymentsService, paymentGateway, "API externa")
+Rel(notificationsService, notificationProvider, "API externa")
+
+// [MermaidChart: 569bf547-36ed-4443-9a84-c277a81c29aa]
+Rel(ordersService, ordersDb, "CRUD")
+Rel(inventoryService, inventoryDb, "CRUD")
+Rel(paymentsService, paymentsDb, "CRUD")
+Rel(deliveryService, deliveryDb, "CRUD")
