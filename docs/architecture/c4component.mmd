@@ -1,0 +1,38 @@
+C4Component
+title Orders Service - Diagrama de Componentes (C4 Level 3)
+
+System_Boundary(ordersBoundary, "Orders Service") {
+
+  Container(ordersService, "Orders Service", "NestJS")
+
+  System_Boundary(presentation, "Presentation Layer") {
+    Component(orderController, "OrderController", "NestJS Controller", "Recebe e valida requisições HTTP/REST para pedidos")
+  }
+
+  System_Boundary(business, "Business Layer") {
+    Component(orderService, "OrderService", "NestJS Service", "Implementa regras de negócio e lógica de pedidos")
+    Component(sagaOrchestrator, "SagaOrchestrator", "NestJS Service", "Coordena o fluxo distribuído da SAGA, gerenciando estados e compensações")
+  }
+
+  System_Boundary(messaging, "Messaging Layer") {
+    Component(eventPublisher, "EventPublisher", "NestJS Provider", "Publica eventos assíncronos para o message broker")
+    Component(eventHandler, "EventHandler", "NestJS Provider", "Consome eventos do message broker e atualiza o estado da SAGA")
+  }
+
+  System_Boundary(data, "Data Layer") {
+    Component(orderRepository, "OrderRepository", "NestJS Repository", "Abstrai operações de persistência no banco de dados")
+  }
+
+  ContainerDb(ordersDb, "Orders Database", "PostgreSQL", "Armazena pedidos e estados da SAGA")
+  Container(queue, "Message Broker", "RabbitMQ", "Fila para eventos assíncronos entre serviços")
+
+  Rel(orderController, orderService, "Encaminha requisições", "Método interno")
+  Rel(orderService, sagaOrchestrator, "Inicia ou atualiza SAGA", "Método interno")
+  Rel(sagaOrchestrator, eventPublisher, "Solicita publicação", "Método interno")
+  Rel(eventPublisher, queue, "Publica eventos", "AMQP")
+  Rel(queue, eventHandler, "Entrega eventos", "AMQP")
+  Rel(eventHandler, sagaOrchestrator, "Notifica mudanças", "Método interno")
+  Rel(sagaOrchestrator, orderService, "Atualiza negócio", "Método interno")
+  Rel(orderService, orderRepository, "Persiste dados", "Método interno")
+  Rel(orderRepository, ordersDb, "Executa queries", "SQL")
+}

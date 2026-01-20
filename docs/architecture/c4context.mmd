@@ -1,0 +1,21 @@
+C4Context
+title IbiEats - Diagrama de Contexto (C4 Level 1)
+
+Person(customer, "Cliente", "Usuário final que realiza pedidos de comida")
+Person(deliveryman, "Entregador", "Profissional responsável pela entrega dos pedidos")
+Person(restaurant, "Restaurante", "Parceiro comercial que fornece produtos e gerencia seu catálogo")
+
+System_Boundary(ibieats, "Plataforma IbiEats") {
+  System(ibieatsSystem, "Sistema IbiEats", "Plataforma de delivery regional baseada em microserviços")
+}
+
+System_Boundary(externals, "Sistemas Externos") {
+  System_Ext(paymentGateway, "Gateway de Pagamento", "Serviço externo para processamento de pagamentos (ex.: Stripe, PagSeguro)")
+  System_Ext(notificationProvider, "Provedor de Notificações", "Serviço para envio de push notifications, emails e SMS (ex.: Firebase, Twilio)")
+}
+
+Rel(customer, ibieatsSystem, "Faz pedidos e rastreia status")
+Rel(deliveryman, ibieatsSystem, "Recebe e atualiza entregas")
+Rel(restaurant, ibieatsSystem, "Gerencia catálogo e pedidos")
+Rel(ibieatsSystem, paymentGateway, "Processa pagamentos")
+Rel(ibieatsSystem, notificationProvider, "Envia notificações")

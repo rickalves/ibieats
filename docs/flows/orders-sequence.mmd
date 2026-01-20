@@ -1,0 +1,50 @@
+sequenceDiagram
+    autonumber
+
+    participant Client as Cliente
+    participant BFF as API Gateway
+    participant Orders as Orders Service
+    participant DB as Database (Orders)
+    participant MQ as RabbitMQ
+    participant SagaOrch as SAGA Orchestrator (Orders)
+
+    %% Recebimento e criação inicial do pedido
+    Client->>BFF: POST /orders (dados do pedido)
+    BFF->>Orders: CreateOrderCommand
+    Orders->>DB: INSERT pedido (status: CREATED)
+    Orders->>SagaOrch: Iniciar SAGA para pedido
+    SagaOrch->>MQ: Publish event: order.created
+    Orders->>BFF: Resposta 201 (pedido criado)
+    BFF->>Client: Pedido criado com sucesso
+
+    %% Aguarda resposta do Inventory
+    MQ->>SagaOrch: event: inventory.reserved
+    SagaOrch->>DB: UPDATE pedido (status: RESERVED)
+    SagaOrch->>MQ: Publish event: payment.requested
+
+    alt Se inventory.failed
+        MQ->>SagaOrch: event: inventory.failed
+        SagaOrch->>DB: UPDATE pedido (status: CANCELED)
+        SagaOrch->>MQ: Publish event: order.canceled
+        Note over SagaOrch: Rollback: Pedido cancelado
+    end
+
+    %% Aguarda resposta do Payments
+    MQ->>SagaOrch: event: payment.approved
+    SagaOrch->>DB: UPDATE pedido (status: PAID)
+    SagaOrch->>MQ: Publish event: delivery.requested
+
+    alt Se payment.failed
+        MQ->>SagaOrch: event: payment.failed
+        SagaOrch->>DB: UPDATE pedido (status: CANCELED)
+        SagaOrch->>MQ: Publish event: inventory.release
+        SagaOrch->>MQ: Publish event: order.canceled
+        Note over SagaOrch: Compensação: Liberar inventário e cancelar
+    end
+
+    %% Aguarda conclusão da entrega
+    MQ->>SagaOrch: event: delivery.completed
+    SagaOrch->>DB: UPDATE pedido (status: DELIVERED)
+    SagaOrch->>MQ: Publish event: order.completed
+
+    Note over SagaOrch: SAGA finalizada com sucesso

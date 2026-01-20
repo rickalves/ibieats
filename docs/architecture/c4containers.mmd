@@ -1,0 +1,49 @@
+C4Container
+title IbiEats - Diagrama de Containers (C4 Level 2)
+
+Person(customer, "Cliente", "Usuário final")
+Person(deliveryman, "Entregador", "Profissional de entrega")
+Person(restaurant, "Restaurante", "Parceiro comercial")
+
+System_Boundary(ibieats, "Plataforma IbiEats") {
+
+  Container(apiGateway, "API Gateway / BFF", "NestJS", "Ponto de entrada único, autenticação JWT, validação e roteamento de requests")
+
+  Container(ordersService, "Orders Service", "NestJS", "Gerencia ciclo de vida dos pedidos e orquestra SAGA distribuída")
+  Container(inventoryService, "Inventory Service", "NestJS", "Controla reserva e disponibilidade de itens do catálogo")
+  Container(paymentsService, "Payments Service", "NestJS", "Processa transações de pagamento via gateway externo")
+  Container(deliveryService, "Delivery Service", "NestJS", "Coordena entregas e atribui entregadores")
+  Container(notificationsService, "Notifications Service", "NestJS", "Envia notificações push, email e SMS")
+
+  ContainerDb(ordersDb, "Orders Database", "PostgreSQL", "Armazena pedidos, status e histórico")
+  ContainerDb(inventoryDb, "Inventory Database", "PostgreSQL", "Armazena catálogo de produtos e estoques")
+  ContainerDb(paymentsDb, "Payments Database", "PostgreSQL", "Armazena transações e dados de pagamento")
+  ContainerDb(deliveryDb, "Delivery Database", "PostgreSQL", "Armazena dados de entregas e rotas")
+
+  Container(queue, "Message Broker", "RabbitMQ", "Fila de mensagens para comunicação assíncrona entre serviços")
+}
+
+System_Boundary(externals, "Sistemas Externos") {
+  System_Ext(paymentGateway, "Gateway de Pagamento", "Processa pagamentos (ex.: Stripe)")
+  System_Ext(notificationProvider, "Provedor de Notificações", "Envia notificações (ex.: Firebase)")
+}
+
+Rel(customer, apiGateway, "Pedidos", "HTTP/REST")
+Rel(deliveryman, apiGateway, "Entregas", "HTTP/REST")
+Rel(restaurant, apiGateway, "Catálogo", "HTTP/REST")
+
+Rel(apiGateway, ordersService, "Pedidos", "HTTP/REST")
+
+Rel(ordersService, queue, "Eventos", "AMQP")
+Rel(queue, inventoryService, "Reservas", "AMQP")
+Rel(queue, paymentsService, "Pagamentos", "AMQP")
+Rel(queue, deliveryService, "Entregas", "AMQP")
+Rel(queue, notificationsService, "Notificações", "AMQP")
+
+Rel(paymentsService, paymentGateway, "Transações", "HTTPS/API")
+Rel(notificationsService, notificationProvider, "Mensagens", "HTTPS/API")
+
+Rel(ordersService, ordersDb, "Persiste", "SQL")
+Rel(inventoryService, inventoryDb, "Atualiza", "SQL")
+Rel(paymentsService, paymentsDb, "Registra", "SQL")
+Rel(deliveryService, deliveryDb, "Armazena", "SQL")
