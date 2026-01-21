@@ -1,7 +1,3 @@
-// infrastructure/messaging/rabbitmq/event-publisher.service.ts
-// Adapter para infraestrutura: publica eventos no RabbitMQ (EDA).
-// Abstrai o broker de mensagens, permitindo troca fácil (ex.: Kafka).
-
 import { Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import {

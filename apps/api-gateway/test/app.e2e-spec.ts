@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { Response } from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
+// Teste de Integração Básico: Verifica se o login funciona (controlador + JWT)
+describe('ApiGateway Integration Test', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -16,10 +18,19 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('should login successfully and return access token', () => {
     return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+      .post('/auth/login')
+      .send({ username: 'admin', password: 'password' })
+      .expect(201) // NestJS padrão para POST sem status customizado
+      .expect((res: Response) => {
+        const body = res.body as { access_token: string };
+        expect(body).toHaveProperty('access_token');
+        expect(typeof body.access_token).toBe('string');
+      });
   });
 });

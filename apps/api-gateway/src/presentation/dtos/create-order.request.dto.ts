@@ -1,6 +1,3 @@
-// presentation/dtos/create-order.request.dto.ts
-// DTO para API: valida entrada HTTP com class-validator.
-
 import {
   IsArray,
   IsString,

@@ -1,7 +1,3 @@
-// application/handlers/create-order.handler.ts
-// Handler de comando: implementa a lógica do caso de uso.
-// Recebe o comando, valida, cria entidade, e publica evento (EDA).
-
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { OrderRequest } from '@domain/entities/order-request.entity';
@@ -14,9 +10,8 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
   constructor(private readonly eventPublisher: EventPublisherService) {}
 
   async execute(command: CreateOrderCommand): Promise<void> {
-    // Criar entidade de domínio
     const order = new OrderRequest(
-      'generated-id', // Em produção, use UUID
+      'generated-id',
       command.userId,
       command.items.map(
         (item) => new OrderItem(item.productId, item.quantity, item.price),
@@ -25,10 +20,8 @@ export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
       command.correlationId,
     );
 
-    // Validar regras de negócio
     OrderValidationService.validateOrder(order);
 
-    // Publicar evento (EDA)
     await this.eventPublisher.publish(order.toOrderRequestedEvent());
   }
 }

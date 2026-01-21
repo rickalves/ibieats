@@ -1,7 +1,3 @@
-// presentation/controllers/orders.controller.ts
-// Controller: ponto de entrada HTTP.
-// Recebe request, transforma em comando, e delega para o handler (CQRS).
-
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { CreateOrderCommand } from '@application/commands/create-order.command';

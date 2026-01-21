@@ -12,15 +12,15 @@ import { RABBITMQ_EXCHANGE } from '@shared/constants/rabbitmq.constants';
 
 @Module({
   imports: [
-    CqrsModule, // Para CQRS
+    CqrsModule,
     PassportModule,
-    JwtModule.register({ secret: process.env.JWT_SECRET || 'fallback-secret' }), // Usar env
+    JwtModule.register({ secret: process.env.JWT_SECRET || 'fallback-secret' }),
     RabbitMQModule.forRoot({
       exchanges: [{ name: RABBITMQ_EXCHANGE, type: 'topic' }],
-      uri: 'amqp://localhost:5672', // Configurar via env
+      uri: process.env.RABBITMQ_URI || 'amqp://localhost:5672/',
     }),
   ],
-  controllers: [OrdersController, AuthController], // Adicionado AuthController
-  providers: [CreateOrderHandler, EventPublisherService, JwtStrategy], // Removido AppService
+  controllers: [OrdersController, AuthController],
+  providers: [CreateOrderHandler, EventPublisherService, JwtStrategy],
 })
 export class AppModule {}

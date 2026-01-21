@@ -1,6 +1,3 @@
-// application/dtos/create-order.dto.ts
-// DTO interno: transfere dados entre camadas sem expor entidades diretamente.
-
 import {
   IsArray,
   IsString,
